@@ -1,6 +1,8 @@
 import customtkinter as ctk
 from tkinter import messagebox
 from database import connect_db
+from dashboard.admin_add import AddUserForm 
+from dashboard.admin_edit import EditUserForm
 
 class UserDashboard(ctk.CTkScrollableFrame):
     def __init__(self, parent, data, role):
@@ -10,25 +12,21 @@ class UserDashboard(ctk.CTkScrollableFrame):
         self.build_ui()
 
     def build_ui(self):
-        # Judul role
         label = ctk.CTkLabel(self, text=self.role.capitalize(), font=("Arial Black", 18))
         label.grid(row=0, column=0, sticky="w", pady=(10, 15), padx=10)
 
-        # Header tabel
         headers = ["ID", "Nama", "Username", "Email", "Aksi"]
         for col, text in enumerate(headers):
             hdr = ctk.CTkLabel(self, text=text, font=("Arial", 12, "bold"))
             hdr.grid(row=1, column=col, padx=10, pady=5, sticky="ew")
 
-        # Rows data user
         for i, user in enumerate(self.data, start=2):
             self.create_row(i, user)
 
-        # Tombol tambah di bawah tabel
-        self.add_btn = ctk.CTkButton(self, text=f"Tambah {self.role.capitalize()}", command=self.add_user)
-        self.add_btn.grid(row=len(self.data) + 2, column=0, columnspan=5, pady=20, padx=10, sticky="w")
+        if self.role != "pemohon":
+            self.add_btn = ctk.CTkButton(self, text=f"Tambah {self.role.capitalize()}", command=self.add_user)
+            self.add_btn.grid(row=len(self.data) + 2, column=0, columnspan=5, pady=20, padx=10, sticky="w")
 
-        # Buat kolom stretchable supaya tabel rapi
         for c in range(5):
             self.grid_columnconfigure(c, weight=1)
 
@@ -38,40 +36,59 @@ class UserDashboard(ctk.CTkScrollableFrame):
         ctk.CTkLabel(self, text=user["username"]).grid(row=row, column=2, padx=10, pady=5, sticky="ew")
         ctk.CTkLabel(self, text=user["email"]).grid(row=row, column=3, padx=10, pady=5, sticky="ew")
 
-        # Frame aksi untuk tombol Edit & Hapus
         action_frame = ctk.CTkFrame(self, fg_color="transparent")
         action_frame.grid(row=row, column=4, padx=10, pady=5, sticky="ew")
 
-        ctk.CTkButton(action_frame, text="Edit", width=50, command=lambda u=user: self.edit_user(u)).pack(side="left", padx=(0,5))
-        ctk.CTkButton(action_frame, text="Hapus", width=60, fg_color="#BC4749", hover_color="#992D2D", command=lambda u=user: self.delete_user(u)).pack(side="left")
+        if self.role != "pemohon":
+            ctk.CTkButton(action_frame, text="Edit", width=50, command=lambda u=user: self.edit_user(u)).pack(side="left", padx=(0,5))
 
-    # Placeholder methods bisa di override
+        ctk.CTkButton(
+            action_frame,
+            text="Hapus",
+            width=60,
+            fg_color="#BC4749",
+            hover_color="#992D2D",
+            command=lambda u=user: self.delete_user(u)
+        ).pack(side="left")
+
     def add_user(self):
-        messagebox.showinfo("Tambah", f"Tambah user baru untuk role {self.role}")
+        form = AddUserForm(self.master, self.role, refresh_callback=self.refresh_data)
+        form.grab_set()
 
     def edit_user(self, user):
-        messagebox.showinfo("Edit", f"Edit {self.role} {user['nama']}")
+        form = EditUserForm(self.master, user, self.role, refresh_callback=self.refresh_data)
+        form.grab_set()
 
     def delete_user(self, user):
         confirm = messagebox.askyesno("Hapus", f"Yakin mau hapus {self.role} {user['nama']}?")
         if confirm:
+            conn = connect_db()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM user WHERE id = %s", (user["id"],))
+            conn.commit()
+            conn.close()
             messagebox.showinfo("Hapus", f"{self.role.capitalize()} {user['nama']} dihapus")
+            self.refresh_data()
 
-# Subclass Staff
+    def refresh_data(self):
+        conn = connect_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, nama, username, email FROM user WHERE role=%s", (self.role,))
+        self.data = cursor.fetchall()
+        conn.close()
+
+        for widget in self.winfo_children():
+            widget.destroy()
+
+        self.build_ui()
+
 class StaffDashboard(UserDashboard):
     def __init__(self, parent, data):
         super().__init__(parent, data, role="staff")
 
-    def add_user(self):
-        messagebox.showinfo("Tambah Staff", "Form tambah staff dibuka")
-
-# Subclass Pemohon
 class PemohonDashboard(UserDashboard):
     def __init__(self, parent, data):
         super().__init__(parent, data, role="pemohon")
-
-    def add_user(self):
-        messagebox.showinfo("Tambah Pemohon", "Form tambah pemohon dibuka")
 
 class AdminDashboard(ctk.CTk):
     def __init__(self):
@@ -86,7 +103,7 @@ class AdminDashboard(ctk.CTk):
 
         ctk.CTkLabel(self, text="Admin Dashboard", font=("Arial Black", 26)).pack(pady=15)
 
-        # Data contoh (dummy) - nanti ganti dari DB
+        # Contoh data awal (nanti diganti dengan fetch dari DB)
         staff_data = [
             {"id": 1, "nama": "Budi", "username": "budi123", "email": "budi@mail.com"},
             {"id": 2, "nama": "Sari", "username": "sari99", "email": "sari@mail.com"},
@@ -99,16 +116,13 @@ class AdminDashboard(ctk.CTk):
             {"id": 3, "nama": "Tika", "username": "tika22", "email": "tika@mail.com"},
         ]
 
-        # Frame kontainer dengan scrollbar untuk staff
         staff_frame = StaffDashboard(self, staff_data)
         staff_frame.pack(fill="both", expand=True, padx=20, pady=(10,5))
 
-        # Frame kontainer dengan scrollbar untuk pemohon
         pemohon_frame = PemohonDashboard(self, pemohon_data)
         pemohon_frame.pack(fill="both", expand=True, padx=20, pady=(20,10))
 
         ctk.CTkLabel(self, text="© 2025 Your Company", font=("Arial", 10)).pack(side="bottom", pady=10)
-
 
 if __name__ == "__main__":
     app = AdminDashboard()
