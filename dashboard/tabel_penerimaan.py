@@ -3,8 +3,9 @@ from database import connect_db
 
 
 class TabelPenerimaanPage(ctk.CTkToplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, dashboard):
+        super().__init__(dashboard)
+        self.dashboard = dashboard
         self.title("Data Penerimaan Barang")
         self.geometry("850x550")
         self.resizable(False, False)
@@ -26,6 +27,10 @@ class TabelPenerimaanPage(ctk.CTkToplevel):
             for result in cursor.stored_results():
                 data = result.fetchall()
             conn.close()
+
+            # Clear dulu isi frame supaya ga numpuk kalau dipanggil ulang
+            for widget in self.scroll_frame.winfo_children():
+                widget.destroy()
 
             # Header tabel
             headers = [

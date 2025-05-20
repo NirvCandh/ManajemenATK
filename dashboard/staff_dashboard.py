@@ -5,12 +5,12 @@ from dashboard.staff_add import TambahBarangPage
 from dashboard.staff_edit import EditBarangPage
 from dashboard.staff_receive import FormPenerimaanPage
 from dashboard.tabel_penerimaan import TabelPenerimaanPage
+from dashboard.update_pengeluaran import EditPengeluaranPage
 
 
 class StaffDashboard(ctk.CTk):
     def __init__(self):
         super().__init__()
-
         self.title("Dashboard Staff - Manajemen ATK")
         self.geometry("950x800")
         self.resizable(False, False)
@@ -18,46 +18,46 @@ class StaffDashboard(ctk.CTk):
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
-        # Buat frame utama scrollable (container besar)
         self.container = ctk.CTkScrollableFrame(self, width=930, height=780)
         self.container.pack(padx=10, pady=10, fill="both", expand=True)
 
-        # Konten utama di dalam container scrollable
         ctk.CTkLabel(
             self.container, text="Dashboard Staff", font=("Arial Bold", 22)
         ).pack(pady=10)
 
-        # Frame daftar barang
-        self.table_frame = ctk.CTkScrollableFrame(self.container, height=250)
-        self.table_frame.pack(pady=10, fill="both", expand=False)
-
-        # Tombol-tombol utama
         button_frame = ctk.CTkFrame(self.container)
         button_frame.pack(pady=10)
+
         ctk.CTkButton(
             button_frame, text="Tambah Barang", command=self.tambah_barang
-        ).pack(side="left", padx=10)
+        ).pack(side="left", padx=5)
         ctk.CTkButton(
             button_frame, text="Penerimaan Barang", command=self.buka_form_penerimaan
-        ).pack(side="left", padx=10)
+        ).pack(side="left", padx=5)
         ctk.CTkButton(
-            self.container, text="Lihat Penerimaan", command=self.buka_tabel_penerimaan
-        ).pack(pady=10)
+            button_frame, text="Lihat Penerimaan", command=self.buka_tabel_penerimaan
+        ).pack(side="left", padx=5)
 
-        # Label dan frame daftar permintaan
-        ctk.CTkLabel(
-            self.container, text="Daftar Request Pinjam", font=("Arial Bold", 18)
-        ).pack(pady=(20, 5))
-        self.request_frame = ctk.CTkScrollableFrame(self.container, height=250)
-        self.request_frame.pack(pady=5, fill="both", expand=False)
+        self.create_section_label("Daftar Barang")
+        self.table_frame = self.create_table_frame()
 
-        ctk.CTkLabel(
-            self.container, text="Daftar Pengeluaran Barang", font=("Arial Bold", 18)
-        ).pack(pady=(20, 5))
-        self.pengeluaran_frame = ctk.CTkScrollableFrame(self.container, height=250)
-        self.pengeluaran_frame.pack(pady=5, fill="both", expand=False)
+        self.create_section_label("Daftar Request Pinjam")
+        self.request_frame = self.create_table_frame()
+
+        self.create_section_label("Daftar Pengeluaran Barang")
+        self.pengeluaran_frame = self.create_table_frame()
 
         self.load_data()
+
+    def create_section_label(self, text):
+        ctk.CTkLabel(self.container, text=text, font=("Arial Bold", 18)).pack(
+            pady=(15, 5)
+        )
+
+    def create_table_frame(self):
+        frame = ctk.CTkScrollableFrame(self.container, height=250)
+        frame.pack(pady=5, fill="both", expand=False)
+        return frame
 
     def load_data(self):
         self.load_barang()
@@ -71,164 +71,29 @@ class StaffDashboard(ctk.CTk):
         conn = connect_db()
         cursor = conn.cursor()
         cursor.callproc("lihat_barang")
-
-        data = []
-        for result in cursor.stored_results():
-            data = result.fetchall()
+        data = [row for result in cursor.stored_results() for row in result.fetchall()]
         conn.close()
 
-        headers = [
-            "Kode",
-            "Nama Barang",
-            "Stok",
-            "Merek",
-            "Satuan",
-            "Aksi Edit",
-            "Aksi Hapus",
-        ]
-        for col, header in enumerate(headers):
-            ctk.CTkLabel(self.table_frame, text=header, font=("Arial Bold", 12)).grid(
-                row=0, column=col, padx=10, pady=5, sticky="w"
+        headers = ["Kode", "Nama Barang", "Stok", "Merek", "Satuan", "Edit", "Hapus"]
+        self.build_table(self.table_frame, headers, data, self.build_barang_row)
+
+    def build_barang_row(self, frame, row_index, item):
+        kode, nama, stok, merek, satuan = item
+        values = [kode, nama, stok, merek or "-", satuan or "-"]
+        for col, val in enumerate(values):
+            ctk.CTkLabel(frame, text=val).grid(
+                row=row_index, column=col, padx=5, pady=3
             )
-
-        for row, item in enumerate(data, start=1):
-            kode_barang, nama, stok, merek, satuan = item
-            ctk.CTkLabel(self.table_frame, text=kode_barang).grid(
-                row=row, column=0, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.table_frame, text=nama).grid(
-                row=row, column=1, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.table_frame, text=stok).grid(
-                row=row, column=2, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.table_frame, text=merek or "-").grid(
-                row=row, column=3, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.table_frame, text=satuan or "-").grid(
-                row=row, column=4, padx=10, pady=5
-            )
-
-            edit_btn = ctk.CTkButton(
-                self.table_frame,
-                text="Edit",
-                fg_color="blue",
-                command=lambda k=kode_barang: self.edit_barang(k),
-            )
-            edit_btn.grid(row=row, column=5, padx=5, pady=5)
-            hapus_btn = ctk.CTkButton(
-                self.table_frame,
-                text="Hapus",
-                fg_color="red",
-                command=lambda k=kode_barang: self.hapus_barang(k),
-            )
-            hapus_btn.grid(row=row, column=6, padx=5, pady=5)
-
-        for col in range(len(headers)):
-            self.table_frame.grid_columnconfigure(col, weight=1)
-
-    def load_permintaan(self):
-        for widget in self.request_frame.winfo_children():
-            widget.destroy()
-
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        query = """
-        SELECT dp.id_permintaan, b.nama_barang, dp.jumlah, p.status, p.id_pemohon
-        FROM detail_permintaan dp
-        JOIN permintaan p ON dp.id_permintaan = p.id_permintaan
-        JOIN barang b ON dp.kode_barang = b.kode_barang
-        ORDER BY p.tgl_permintaan DESC
-        """
-        cursor.execute(query)
-        requests = cursor.fetchall()
-        conn.close()
-
-        headers = ["ID Permintaan", "Nama Barang", "Jumlah", "Status", "ID Pemohon"]
-        for col, header in enumerate(headers):
-            ctk.CTkLabel(self.request_frame, text=header, font=("Arial Bold", 12)).grid(
-                row=0, column=col, padx=10, pady=5, sticky="w"
-            )
-
-        for row, item in enumerate(requests, start=1):
-            id_perm, nama_barang, jumlah, status, id_pemohon = item
-            ctk.CTkLabel(self.request_frame, text=id_perm).grid(
-                row=row, column=0, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.request_frame, text=nama_barang).grid(
-                row=row, column=1, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.request_frame, text=jumlah).grid(
-                row=row, column=2, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.request_frame, text=status).grid(
-                row=row, column=3, padx=10, pady=5
-            )
-            ctk.CTkLabel(self.request_frame, text=id_pemohon).grid(
-                row=row, column=4, padx=10, pady=5
-            )
-
-        for col in range(len(headers)):
-            self.request_frame.grid_columnconfigure(col, weight=1)
-
-    def load_pengeluaran(self):
-        for widget in self.pengeluaran_frame.winfo_children():
-            widget.destroy()
-
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        query = """
-        SELECT id_pengeluaran, kode_barang, jml_keluar, tgl_keluar, tujuan, id_pemohon, id_petugas
-        FROM pengeluaran
-        ORDER BY tgl_keluar DESC
-        """
-        cursor.execute(query)
-        pengeluaran_data = cursor.fetchall()
-        conn.close()
-
-        headers = [
-            "ID Pengeluaran",
-            "Kode Barang",
-            "Jumlah",
-            "Tanggal",
-            "Tujuan",
-            "ID Pemohon",
-            "ID Petugas",
-        ]
-        for col, header in enumerate(headers):
-            ctk.CTkLabel(
-                self.pengeluaran_frame, text=header, font=("Arial Bold", 12)
-            ).grid(row=0, column=col, padx=10, pady=5, sticky="w")
-
-        for row, item in enumerate(pengeluaran_data, start=1):
-            for col, val in enumerate(item):
-                ctk.CTkLabel(self.pengeluaran_frame, text=val).grid(
-                    row=row, column=col, padx=10, pady=5
-                )
-
-        for col in range(len(headers)):
-            self.pengeluaran_frame.grid_columnconfigure(col, weight=1)
-
-    def tambah_barang(self):
-        TambahBarangPage()
+        ctk.CTkButton(
+            frame, text="Edit", fg_color="blue", command=lambda: self.edit_barang(kode)
+        ).grid(row=row_index, column=5, padx=5)
+        ctk.CTkButton(
+            frame, text="Hapus", fg_color="red", command=lambda: self.hapus_barang(kode)
+        ).grid(row=row_index, column=6, padx=5)
 
     def edit_barang(self, kode_barang):
-        conn = connect_db()
-        cursor = conn.cursor()
-        cursor.callproc("lihat_barang_satu", (kode_barang,))
-        data = None
-        for result in cursor.stored_results():
-            data = result.fetchone()
-        conn.close()
-        if data:
-            nama_awal, stok_awal, merek_awal, satuan_awal = data
-            EditBarangPage(kode_barang, nama_awal, stok_awal, merek_awal, satuan_awal)
-        else:
-            messagebox.showerror(
-                "Error", f"Data barang dengan kode {kode_barang} tidak ditemukan."
-            )
+        EditBarangPage(kode_barang)
+        self.after(500, self.load_barang)
 
     def hapus_barang(self, kode_barang):
         confirm = messagebox.askyesno(
@@ -237,14 +102,136 @@ class StaffDashboard(ctk.CTk):
         if confirm:
             conn = connect_db()
             cursor = conn.cursor()
-            cursor.callproc("hapus_barang", (kode_barang,))
+            cursor.execute("DELETE FROM barang WHERE kode_barang = %s", (kode_barang,))
             conn.commit()
             conn.close()
             messagebox.showinfo("Sukses", "Barang berhasil dihapus.")
-            self.load_data()
+            self.load_barang()
+
+    def load_permintaan(self):
+        for widget in self.request_frame.winfo_children():
+            widget.destroy()
+
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                p.id_permintaan,
+                p.tgl_permintaan,
+                p.status,
+                pemohon.id_pengguna AS id_pemohon,
+                pemohon.nama_lengkap AS nama_pemohon,
+                petugas.id_pengguna AS id_petugas,
+                petugas.nama_lengkap AS nama_petugas,
+                p.tgl_setuju
+            FROM permintaan p
+            LEFT JOIN pengguna pemohon ON p.id_pemohon = pemohon.id_pengguna
+            LEFT JOIN pengguna petugas ON p.id_petugas = petugas.id_pengguna
+            ORDER BY p.tgl_permintaan DESC
+            """
+        )
+        data = cursor.fetchall()
+        conn.close()
+
+        headers = [
+            "ID Permintaan",
+            "Tanggal Permintaan",
+            "Status",
+            "ID Pemohon",
+            "Nama Pemohon",
+            "ID Petugas",
+            "Nama Petugas",
+            "Tanggal Setuju",
+        ]
+        self.build_table(self.request_frame, headers, data)
+
+    def load_pengeluaran(self):
+        for widget in self.pengeluaran_frame.winfo_children():
+            widget.destroy()
+
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.callproc("lihat_pengeluaran")
+        data = [row for result in cursor.stored_results() for row in result.fetchall()]
+        conn.close()
+
+        headers = [
+            "ID",
+            "Kode",
+            "Jumlah",
+            "Tanggal",
+            "Tujuan",
+            "Pemohon",
+            "Petugas",
+            "Edit",
+            "Hapus",
+        ]
+        self.build_table(
+            self.pengeluaran_frame, headers, data, self.build_pengeluaran_row
+        )
+
+    def build_pengeluaran_row(self, frame, row_index, item):
+        for col, val in enumerate(item[:-2]):
+            ctk.CTkLabel(frame, text=val).grid(
+                row=row_index, column=col, padx=5, pady=3
+            )
+        id_pengeluaran = item[0]
+        ctk.CTkButton(
+            frame,
+            text="Edit",
+            fg_color="blue",
+            command=lambda: self.edit_pengeluaran(id_pengeluaran),
+        ).grid(row=row_index, column=7, padx=5)
+        ctk.CTkButton(
+            frame,
+            text="Hapus",
+            fg_color="red",
+            command=lambda: self.hapus_pengeluaran(id_pengeluaran),
+        ).grid(row=row_index, column=8, padx=5)
+
+    def edit_pengeluaran(self, id_pengeluaran):
+        EditPengeluaranPage(id_pengeluaran)
+        self.after(500, self.load_pengeluaran)
+
+    def hapus_pengeluaran(self, id_pengeluaran):
+        confirm = messagebox.askyesno(
+            "Konfirmasi", f"Yakin ingin menghapus pengeluaran ID {id_pengeluaran}?"
+        )
+        if confirm:
+            conn = connect_db()
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM pengeluaran WHERE id_pengeluaran = %s", (id_pengeluaran,)
+            )
+            conn.commit()
+            conn.close()
+            messagebox.showinfo("Sukses", "Pengeluaran berhasil dihapus.")
+            self.load_pengeluaran()
+
+    def build_table(self, frame, headers, data, row_builder=None):
+        for col, header in enumerate(headers):
+            ctk.CTkLabel(frame, text=header, font=("Arial Bold", 12)).grid(
+                row=0, column=col, padx=5, pady=3, sticky="w"
+            )
+            frame.grid_columnconfigure(col, weight=1)
+
+        for row_index, item in enumerate(data, start=1):
+            if row_builder:
+                row_builder(frame, row_index, item)
+            else:
+                for col, val in enumerate(item):
+                    ctk.CTkLabel(frame, text=val).grid(
+                        row=row_index, column=col, padx=5, pady=3
+                    )
+
+    def tambah_barang(self):
+        TambahBarangPage()
+        self.after(500, self.load_barang)
 
     def buka_form_penerimaan(self):
         FormPenerimaanPage()
+        self.after(500, self.load_data)
 
     def buka_tabel_penerimaan(self):
         TabelPenerimaanPage(self)

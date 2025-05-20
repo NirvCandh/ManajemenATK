@@ -13,19 +13,19 @@ if __name__ == "__main__":
     app = StaffDashboard()
     app.mainloop()
 
-# class MainApp:   
+# class MainApp:
 #     def __init__(self):
 #         ctk.set_appearance_mode("light")
 #         ctk.set_default_color_theme("blue")
 
-#         self.root = ctk.CTk() 
+#         self.root = ctk.CTk()
 #         self.root.title("ATK Manager")
 #         self.root.geometry("500x500")
 
 #         self.current_frame = None
 #         self.show_login()
 
-#         self.root.mainloop() 
+#         self.root.mainloop()
 
 #     def clear_frame(self):
 #         if self.current_frame:
