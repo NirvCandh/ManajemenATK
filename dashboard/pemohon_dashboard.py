@@ -1,7 +1,6 @@
 import customtkinter as ctk
 from tkinter import messagebox
 from database import connect_db
-# from pages.peminjaman_page import PeminjamanForm  # Uncomment kalau sudah ada
 
 class PemohonDashboard(ctk.CTk):
     def __init__(self):
@@ -16,7 +15,6 @@ class PemohonDashboard(ctk.CTk):
 
         ctk.CTkLabel(self, text="Barang Tersedia", font=("Arial Black", 22)).pack(pady=20)
 
-        # Frame scrollable untuk tabel
         self.table_frame = ctk.CTkScrollableFrame(self, height=300)
         self.table_frame.pack(padx=20, pady=10, fill="both", expand=True)
 
@@ -31,29 +29,23 @@ class PemohonDashboard(ctk.CTk):
         rows = cursor.fetchall()
         conn.close()
 
-        # Clear dulu isi frame sebelum reload (jika perlu reload)
         for widget in self.table_frame.winfo_children():
             widget.destroy()
 
-        # Header tabel
         ctk.CTkLabel(self.table_frame, text="Nama Barang", font=("Arial Bold", 14)).grid(row=0, column=0, padx=15, pady=8, sticky="w")
         ctk.CTkLabel(self.table_frame, text="Stok", font=("Arial Bold", 14)).grid(row=0, column=1, padx=15, pady=8, sticky="e")
 
-        # Isi tabel
         for i, (nama, stok) in enumerate(rows, start=1):
             ctk.CTkLabel(self.table_frame, text=nama).grid(row=i, column=0, padx=15, pady=5, sticky="w")
             ctk.CTkLabel(self.table_frame, text=str(stok)).grid(row=i, column=1, padx=15, pady=5, sticky="e")
 
-        # Buat kolom stretch supaya rapi
         self.table_frame.grid_columnconfigure(0, weight=3)
         self.table_frame.grid_columnconfigure(1, weight=1)
 
     def open_peminjaman_form(self):
         self.destroy()
-        # form = PeminjamanForm()  # Uncomment kalau sudah ada
-        # form.mainloop()
-        print("Arahkan ke halaman peminjaman form...")  # Placeholder
-
+        print("Arahkan ke halaman peminjaman form...") 
+        
 if __name__ == "__main__":
     app = PemohonDashboard()
     app.mainloop()

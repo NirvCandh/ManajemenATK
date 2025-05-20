@@ -5,5 +5,5 @@ def connect_db():
         host="localhost",       
         user="root",            
         password="",            
-        database="atk_manager"   
+        database="db_ta_kelompok7"   
     )

@@ -2,18 +2,12 @@ import customtkinter as ctk
 from tkinter import messagebox
 from database import connect_db
 
-class LoginApp(ctk.CTk):
-    def __init__(self, login_success_callback):
-        super().__init__()
+class LoginApp(ctk.CTkFrame):
+    def __init__(self, master, login_success_callback, show_register_callback):
+        super().__init__(master)
 
         self.login_success_callback = login_success_callback
-
-        self.title("Login - Manajemen ATK")
-        self.geometry("400x450")
-        self.resizable(False, False)
-
-        ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
+        self.show_register_callback = show_register_callback
 
         ctk.CTkLabel(self, text="ATK Manager", font=("Arial Black", 26)).pack(pady=30)
 
@@ -25,10 +19,20 @@ class LoginApp(ctk.CTk):
 
         self.role_dropdown = ctk.CTkOptionMenu(self, values=["admin", "staff", "pemohon"])
         self.role_dropdown.pack(pady=10)
-        self.role_dropdown.set("admin")  # Default value
+        self.role_dropdown.set("admin")
 
         ctk.CTkButton(self, text="Login", command=self.login).pack(pady=20)
-        ctk.CTkLabel(self, text="© 2025 Instansi Lo", font=("Arial", 10)).pack(side="bottom", pady=10)
+
+        frame = ctk.CTkFrame(self, fg_color="transparent")
+        frame.pack(pady=10)
+
+        label1 = ctk.CTkLabel(frame, text="Belum punya akun?", text_color="black")
+        label1.pack(side="left")
+        
+        label2 = ctk.CTkLabel(frame, text="Daftar di sini", text_color="#1f6aa5", cursor="hand2", font=("Arial Bold", 10))
+        label2.pack(side="left", padx=5)
+
+        label2.bind("<Button-1>", lambda e: self.show_register_callback())
 
     def login(self):
         email = self.email_entry.get()
@@ -50,14 +54,5 @@ class LoginApp(ctk.CTk):
 
             messagebox.showinfo("Login Berhasil", f"Halo {db_role}!")
             self.login_success_callback(db_role)
-            self.destroy()
         else:
             messagebox.showerror("Gagal", "Email atau password salah!")
-
-if __name__ == "__main__":
-    def dummy_callback(role):
-        print("Login sukses, role:", role)
-
-    app = LoginApp(dummy_callback)
-    app.mainloop()
-    

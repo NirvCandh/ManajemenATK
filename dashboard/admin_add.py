@@ -6,7 +6,7 @@ class AddUserForm(ctk.CTkToplevel):
     def __init__(self, parent, role, refresh_callback=None):
         super().__init__(parent)
         self.role = role
-        self.refresh_callback = refresh_callback  # buat refresh list user di parent kalau perlu
+        self.refresh_callback = refresh_callback 
 
         self.title(f"Tambah {role.capitalize()}")
         self.geometry("350x300")

@@ -5,17 +5,17 @@ from dashboard.admin_add import AddUserForm
 from dashboard.admin_edit import EditUserForm
 
 class UserDashboard(ctk.CTkScrollableFrame):
-    def __init__(self, parent, data, role):
+    def __init__(self, parent, role):
         super().__init__(parent)
-        self.data = data
         self.role = role
-        self.build_ui()
+        self.data = []
+        self.refresh_data()
 
     def build_ui(self):
         label = ctk.CTkLabel(self, text=self.role.capitalize(), font=("Arial Black", 18))
         label.grid(row=0, column=0, sticky="w", pady=(10, 15), padx=10)
 
-        headers = ["ID", "Nama", "Username", "Email", "Aksi"]
+        headers = ["ID Pengguna", "Nama Lengkap", "Username", "Email", "Aksi"]
         for col, text in enumerate(headers):
             hdr = ctk.CTkLabel(self, text=text, font=("Arial", 12, "bold"))
             hdr.grid(row=1, column=col, padx=10, pady=5, sticky="ew")
@@ -31,8 +31,8 @@ class UserDashboard(ctk.CTkScrollableFrame):
             self.grid_columnconfigure(c, weight=1)
 
     def create_row(self, row, user):
-        ctk.CTkLabel(self, text=str(user["id"])).grid(row=row, column=0, padx=10, pady=5, sticky="ew")
-        ctk.CTkLabel(self, text=user["nama"]).grid(row=row, column=1, padx=10, pady=5, sticky="ew")
+        ctk.CTkLabel(self, text=str(user["id_pengguna"])).grid(row=row, column=0, padx=10, pady=5, sticky="ew")
+        ctk.CTkLabel(self, text=user["nama_lengkap"]).grid(row=row, column=1, padx=10, pady=5, sticky="ew")
         ctk.CTkLabel(self, text=user["username"]).grid(row=row, column=2, padx=10, pady=5, sticky="ew")
         ctk.CTkLabel(self, text=user["email"]).grid(row=row, column=3, padx=10, pady=5, sticky="ew")
 
@@ -60,20 +60,20 @@ class UserDashboard(ctk.CTkScrollableFrame):
         form.grab_set()
 
     def delete_user(self, user):
-        confirm = messagebox.askyesno("Hapus", f"Yakin mau hapus {self.role} {user['nama']}?")
+        confirm = messagebox.askyesno("Hapus", f"Yakin mau hapus {self.role} {user['nama_lengkap']}?")
         if confirm:
             conn = connect_db()
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM user WHERE id = %s", (user["id"],))
+            cursor.execute("DELETE FROM pengguna WHERE id_pengguna = %s", (user["id_pengguna"],))
             conn.commit()
             conn.close()
-            messagebox.showinfo("Hapus", f"{self.role.capitalize()} {user['nama']} dihapus")
+            messagebox.showinfo("Hapus", f"{self.role.capitalize()} {user['nama_lengkap']} dihapus")
             self.refresh_data()
 
     def refresh_data(self):
         conn = connect_db()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, nama, username, email FROM user WHERE role=%s", (self.role,))
+        cursor.execute("SELECT id_pengguna, nama_lengkap, username, email FROM pengguna WHERE role=%s", (self.role,))
         self.data = cursor.fetchall()
         conn.close()
 
@@ -83,12 +83,12 @@ class UserDashboard(ctk.CTkScrollableFrame):
         self.build_ui()
 
 class StaffDashboard(UserDashboard):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, role="staff")
+    def __init__(self, parent):
+        super().__init__(parent, role="petugas")
 
 class PemohonDashboard(UserDashboard):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, role="pemohon")
+    def __init__(self, parent):
+        super().__init__(parent, role="pemohon")
 
 class AdminDashboard(ctk.CTk):
     def __init__(self):
@@ -103,26 +103,12 @@ class AdminDashboard(ctk.CTk):
 
         ctk.CTkLabel(self, text="Admin Dashboard", font=("Arial Black", 26)).pack(pady=15)
 
-        # Contoh data awal (nanti diganti dengan fetch dari DB)
-        staff_data = [
-            {"id": 1, "nama": "Budi", "username": "budi123", "email": "budi@mail.com"},
-            {"id": 2, "nama": "Sari", "username": "sari99", "email": "sari@mail.com"},
-            {"id": 3, "nama": "Doni", "username": "doni88", "email": "doni@mail.com"},
-        ]
-
-        pemohon_data = [
-            {"id": 1, "nama": "Andi", "username": "andi77", "email": "andi@mail.com"},
-            {"id": 2, "nama": "Rina", "username": "rina88", "email": "rina@mail.com"},
-            {"id": 3, "nama": "Tika", "username": "tika22", "email": "tika@mail.com"},
-        ]
-
-        staff_frame = StaffDashboard(self, staff_data)
+        # Tampilkan dashboard staff & pemohon tanpa passing data manual
+        staff_frame = StaffDashboard(self)
         staff_frame.pack(fill="both", expand=True, padx=20, pady=(10,5))
 
-        pemohon_frame = PemohonDashboard(self, pemohon_data)
+        pemohon_frame = PemohonDashboard(self)
         pemohon_frame.pack(fill="both", expand=True, padx=20, pady=(20,10))
-
-        ctk.CTkLabel(self, text="© 2025 Your Company", font=("Arial", 10)).pack(side="bottom", pady=10)
 
 if __name__ == "__main__":
     app = AdminDashboard()
