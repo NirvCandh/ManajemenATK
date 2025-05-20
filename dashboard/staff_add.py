@@ -18,13 +18,13 @@ class TambahBarangPage(ctk.CTkToplevel):
         self.nama_entry = ctk.CTkEntry(self, placeholder_text="Nama Barang")
         self.nama_entry.pack(pady=10)
 
-        self.stok_entry = ctk.CTkEntry(self, placeholder_text="Stok")
+        self.stok_entry = ctk.CTkEntry(self, placeholder_text="Merek")
         self.stok_entry.pack(pady=10)
 
         self.satuan_entry = ctk.CTkEntry(self, placeholder_text="Satuan")
         self.satuan_entry.pack(pady=10)
 
-        self.merk_entry = ctk.CTkEntry(self, placeholder_text="Merk")
+        self.merk_entry = ctk.CTkEntry(self, placeholder_text="Stok")
         self.merk_entry.pack(pady=10)
 
         ctk.CTkButton(self, text="Simpan", command=self.simpan_barang).pack(pady=20)
@@ -32,11 +32,11 @@ class TambahBarangPage(ctk.CTkToplevel):
     def simpan_barang(self):
         kode = self.kode_entry.get()
         nama = self.nama_entry.get()
-        stok = self.stok_entry.get()
+        merek = self.stok_entry.get()
         satuan = self.satuan_entry.get()
-        merk = self.merk_entry.get()
+        stok = self.merk_entry.get()
 
-        if not all([kode, nama, stok, satuan, merk]):
+        if not all([kode, nama, merek, satuan, satuan]):
             messagebox.showerror("Error", "Semua field harus diisi!")
             return
 
@@ -49,11 +49,8 @@ class TambahBarangPage(ctk.CTkToplevel):
         try:
             conn = connect_db()
             cursor = conn.cursor()
-            query = """
-                INSERT INTO barang (kode_barang, nama_barang, stok, kategori, satuan, merk)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(query, (kode, nama, stok_int, satuan, merk))
+            query = "CALL tambah_barang(%s, %s, %s, %s, %s)"
+            cursor.execute(query, (kode, nama, merek, satuan, stok_int))
             conn.commit()
             conn.close()
 
