@@ -7,40 +7,53 @@ class TambahBarangPage(ctk.CTkToplevel):
         super().__init__()
 
         self.title("Tambah Barang")
-        self.geometry("400x400")
+        self.geometry("400x500")
         self.resizable(False, False)
 
         ctk.CTkLabel(self, text="Form Tambah Barang", font=("Arial Bold", 20)).pack(pady=20)
 
+        self.kode_entry = ctk.CTkEntry(self, placeholder_text="Kode Barang")
+        self.kode_entry.pack(pady=10)
+
         self.nama_entry = ctk.CTkEntry(self, placeholder_text="Nama Barang")
         self.nama_entry.pack(pady=10)
 
-        self.jumlah_entry = ctk.CTkEntry(self, placeholder_text="Jumlah")
-        self.jumlah_entry.pack(pady=10)
-
-        self.kategori_entry = ctk.CTkEntry(self, placeholder_text="Kategori")
-        self.kategori_entry.pack(pady=10)
+        self.stok_entry = ctk.CTkEntry(self, placeholder_text="Stok")
+        self.stok_entry.pack(pady=10)
 
         self.satuan_entry = ctk.CTkEntry(self, placeholder_text="Satuan")
         self.satuan_entry.pack(pady=10)
 
+        self.merk_entry = ctk.CTkEntry(self, placeholder_text="Merk")
+        self.merk_entry.pack(pady=10)
+
         ctk.CTkButton(self, text="Simpan", command=self.simpan_barang).pack(pady=20)
 
     def simpan_barang(self):
+        kode = self.kode_entry.get()
         nama = self.nama_entry.get()
-        jumlah = self.jumlah_entry.get()
-        kategori = self.kategori_entry.get()
+        stok = self.stok_entry.get()
         satuan = self.satuan_entry.get()
+        merk = self.merk_entry.get()
 
-        if not all([nama, jumlah, kategori, satuan]):
+        if not all([kode, nama, stok, satuan, merk]):
             messagebox.showerror("Error", "Semua field harus diisi!")
+            return
+
+        try:
+            stok_int = int(stok)
+        except ValueError:
+            messagebox.showerror("Error", "Stok harus berupa angka!")
             return
 
         try:
             conn = connect_db()
             cursor = conn.cursor()
-            query = "INSERT INTO barang (nama_brg, jumlah, kategori, satuan) VALUES (%s, %s, %s, %s)"
-            cursor.execute(query, (nama, jumlah, kategori, satuan))
+            query = """
+                INSERT INTO barang (kode_barang, nama_barang, stok, kategori, satuan, merk)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(query, (kode, nama, stok_int, satuan, merk))
             conn.commit()
             conn.close()
 

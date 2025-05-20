@@ -7,14 +7,13 @@ class EditUserForm(ctk.CTkToplevel):
         super().__init__(master)
         self.user = user
         self.role = role
-        self.refresh_callback = refresh_callback  # Simpan callback
+        self.refresh_callback = refresh_callback
 
         self.title(f"Edit {self.role.capitalize()}")
         self.geometry("400x300")
 
-        # Contoh input sederhana
         self.entry_nama = ctk.CTkEntry(self)
-        self.entry_nama.insert(0, user["nama"])
+        self.entry_nama.insert(0, user["nama_lengkap"])
         self.entry_nama.pack(pady=10)
 
         self.entry_username = ctk.CTkEntry(self)
@@ -41,8 +40,8 @@ class EditUserForm(ctk.CTkToplevel):
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                UPDATE user SET nama=%s, username=%s, email=%s WHERE id=%s
-            """, (nama, username, email, self.user["id"]))
+                UPDATE pengguna SET nama_lengkap=%s, username=%s, email=%s WHERE id_pengguna=%s
+            """, (nama, username, email, self.user["id_pengguna"]))
             conn.commit()
         except Exception as e:
             messagebox.showerror("Error", f"Gagal update data: {e}")
