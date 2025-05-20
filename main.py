@@ -6,55 +6,54 @@ from dashboard.pemohon_dashboard import PemohonDashboard
 from register import RegisterApp
 
 
-if __name__ == "__main__":
-    ctk.set_appearance_mode("light")
-    ctk.set_default_color_theme("blue")
-
-    app = StaffDashboard()
-    app.mainloop()
-
-# class MainApp:
-#     def __init__(self):
-#         ctk.set_appearance_mode("light")
-#         ctk.set_default_color_theme("blue")
-
-#         self.root = ctk.CTk()
-#         self.root.title("ATK Manager")
-#         self.root.geometry("500x500")
-
-#         self.current_frame = None
-#         self.show_login()
-
-#         self.root.mainloop()
-
-#     def clear_frame(self):
-#         if self.current_frame:
-#             self.current_frame.destroy()
-
-#     def show_login(self):
-#         self.clear_frame()
-#         self.current_frame = LoginApp(self.root, self.on_login_success, self.show_register)
-#         self.current_frame.pack(expand=True, fill="both")
-
-#     def show_register(self):
-#         self.clear_frame()
-#         self.current_frame = RegisterApp(self.root, self.show_login)
-#         self.current_frame.pack(expand=True, fill="both")
-
-#     def on_login_success(self, role):
-#         self.clear_frame()
-
-#         if role == "admin":
-#             self.current_frame = AdminDashboard(self.root)
-#         elif role == "staff":
-#             self.current_frame = StaffDashboard(self.root)
-#         elif role == "pemohon":
-#             self.current_frame = PemohonDashboard(self.root)
-#         else:
-#             print("Role tidak dikenal")
-#             return
-
-#         self.current_frame.pack(expand=True, fill="both")
-
 # if __name__ == "__main__":
-#     app = MainApp()
+#     ctk.set_appearance_mode("light")
+#     ctk.set_default_color_theme("blue")
+
+#     app = PemohonDashboard()
+#     app.mainloop()
+
+
+class MainApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
+        self.title("Manajemen ATK")
+        self.geometry("700x500")
+        self.resizable(False, False)
+
+        self.show_register()
+
+    def show_register(self):
+        self.clear_widgets()
+        register_frame = RegisterApp(self, self.show_login)
+        register_frame.pack(expand=True, fill="both")
+
+    def show_login(self):
+        self.clear_widgets()
+        login_frame = LoginApp(self, self.login_success, self.show_register)
+        login_frame.pack(expand=True, fill="both")
+
+    def login_success(self, role):
+        self.clear_widgets()
+        if role == "Admin":
+            dashboard = AdminDashboard()
+        elif role == "Staff":
+            dashboard = StaffDashboard()
+        elif role == "Pemohon":
+            dashboard = PemohonDashboard()
+        else:
+            ctk.CTkLabel(self, text="Role tidak dikenal").pack()
+            return
+
+        dashboard.mainloop()
+
+    def clear_widgets(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+
+
+if __name__ == "__main__":
+    app = MainApp()
+    app.mainloop()

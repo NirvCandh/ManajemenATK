@@ -1,8 +1,10 @@
 import customtkinter as ctk
+import bcrypt
 from tkinter import messagebox
 from database import connect_db
 
-class RegisterApp(ctk.CTkFrame):  
+
+class RegisterApp(ctk.CTkFrame):
     def __init__(self, master, show_login_callback):
         super().__init__(master)
         self.show_login_callback = show_login_callback
@@ -21,55 +23,84 @@ class RegisterApp(ctk.CTkFrame):
         self.password_entry = ctk.CTkEntry(self, placeholder_text="Password", show="*")
         self.password_entry.pack(pady=8)
 
-        self.role_optionmenu = ctk.CTkOptionMenu(self, values=["admin", "staff", "pemohon"])
+        self.role_optionmenu = ctk.CTkOptionMenu(
+            self, values=["Admin", "Petugas", "Pemohon"]
+        )
         self.role_optionmenu.pack(pady=8)
-        self.role_optionmenu.set("pemohon")
+        self.role_optionmenu.set("Pemohon")
 
         label_frame = ctk.CTkFrame(self, fg_color="transparent")
         label_frame.pack(pady=5)
 
-        ctk.CTkLabel(label_frame, text="Sudah punya akun?", font=("Arial Bold", 10)).pack(side="left")
+        ctk.CTkLabel(
+            label_frame, text="Sudah punya akun?", font=("Arial Bold", 10)
+        ).pack(side="left")
 
         self.login_label = ctk.CTkLabel(
             label_frame,
             text="Login di sini",
             text_color="#1f6aa5",
             font=("Arial Bold", 10),
-            cursor="hand2"
+            cursor="hand2",
         )
         self.login_label.pack(side="left", padx=4)
 
-        self.login_label.bind("<Enter>", lambda e: self.login_label.configure(underline=True, text_color="#144e85"))
-        self.login_label.bind("<Leave>", lambda e: self.login_label.configure(underline=False, text_color="#1f6aa5"))
+        self.login_label.bind(
+            "<Enter>",
+            lambda e: self.login_label.configure(underline=True, text_color="#144e85"),
+        )
+        self.login_label.bind(
+            "<Leave>",
+            lambda e: self.login_label.configure(underline=False, text_color="#1f6aa5"),
+        )
         self.login_label.bind("<Button-1>", lambda e: self.open_login())
 
         ctk.CTkButton(self, text="Register", command=self.register).pack(pady=20)
 
     def register(self):
-        nama = self.nama_entry.get()
-        username = self.username_entry.get()
-        email = self.email_entry.get()
+        nama_lengkap = self.nama_entry.get().strip()
+        username = self.username_entry.get().strip()
+        email = self.email_entry.get().strip()
         password = self.password_entry.get()
-        role = self.role_combobox.get()
+        role = self.role_optionmenu.get()
 
-        if not all([nama, username, email, password]):
+        if not all([nama_lengkap, username, email, password]):
             messagebox.showerror("Error", "Semua field harus diisi!")
             return
 
-        conn = connect_db()
-        cursor = conn.cursor()
-        query = "INSERT INTO user (nama, username, email, password, role) VALUES (%s, %s, %s, %s, %s)"
+        # Validasi email sederhana (bisa dikembangkan lagi)
+        if "@" not in email or "." not in email:
+            messagebox.showerror("Error", "Format email tidak valid!")
+            return
+
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
         try:
-            cursor.execute(query, (nama, username, email, password, role))
+            conn = connect_db()
+            cursor = conn.cursor()
+
+            query = """
+                INSERT INTO pengguna (nama_lengkap, username, email, password, role)
+                VALUES (%s, %s, %s, %s, %s)
+            """
+
+            cursor.execute(
+                query,
+                (nama_lengkap, username, email, hashed_password.decode("utf-8"), role),
+            )
             conn.commit()
-            messagebox.showinfo("Sukses", "Registrasi berhasil. Silakan login.")
+            cursor.close()
             conn.close()
 
+            messagebox.showinfo("Sukses", "Registrasi berhasil. Silakan login.")
             self.open_login()
 
         except Exception as e:
             messagebox.showerror("Error", f"Gagal registrasi: {str(e)}")
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
     def open_login(self):
         self.destroy()

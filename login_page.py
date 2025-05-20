@@ -1,6 +1,8 @@
 import customtkinter as ctk
+import bcrypt
 from tkinter import messagebox
-from database import connect_db
+from database import connect_db  # Pastikan ini fungsi koneksi db lo
+
 
 class LoginApp(ctk.CTkFrame):
     def __init__(self, master, login_success_callback, show_register_callback):
@@ -17,9 +19,11 @@ class LoginApp(ctk.CTkFrame):
         self.password_entry = ctk.CTkEntry(self, placeholder_text="Password", show="*")
         self.password_entry.pack(pady=10)
 
-        self.role_dropdown = ctk.CTkOptionMenu(self, values=["admin", "staff", "pemohon"])
+        self.role_dropdown = ctk.CTkOptionMenu(
+            self, values=["Admin", "Petugas", "Pemohon"]
+        )
         self.role_dropdown.pack(pady=10)
-        self.role_dropdown.set("admin")
+        self.role_dropdown.set("Admin")
 
         ctk.CTkButton(self, text="Login", command=self.login).pack(pady=20)
 
@@ -28,31 +32,66 @@ class LoginApp(ctk.CTkFrame):
 
         label1 = ctk.CTkLabel(frame, text="Belum punya akun?", text_color="black")
         label1.pack(side="left")
-        
-        label2 = ctk.CTkLabel(frame, text="Daftar di sini", text_color="#1f6aa5", cursor="hand2", font=("Arial Bold", 10))
+
+        label2 = ctk.CTkLabel(
+            frame,
+            text="Daftar di sini",
+            text_color="#1f6aa5",
+            cursor="hand2",
+            font=("Arial Bold", 10),
+        )
         label2.pack(side="left", padx=5)
 
         label2.bind("<Button-1>", lambda e: self.show_register_callback())
 
     def login(self):
-        email = self.email_entry.get()
+        email = self.email_entry.get().strip()
         password = self.password_entry.get()
         selected_role = self.role_dropdown.get()
 
-        conn = connect_db()
-        cursor = conn.cursor()
-        query = "SELECT role FROM user WHERE email=%s AND password=%s"
-        cursor.execute(query, (email, password))
-        result = cursor.fetchone()
-        conn.close()
+        if not email or not password:
+            messagebox.showerror("Error", "Email dan password harus diisi!")
+            return
 
-        if result:
-            db_role = result[0]
-            if db_role != selected_role:
-                messagebox.showerror("Role Tidak Sesuai", "Role yang dipilih tidak cocok dengan data.")
-                return
+        try:
+            conn = connect_db()
+            cursor = conn.cursor()
+            # Pastikan kolom di DB: password (hashed), role (pas case), dan nama_lengkap ada
+            query = "SELECT password, role, nama_lengkap FROM pengguna WHERE email=%s"
+            cursor.execute(query, (email,))
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
 
-            messagebox.showinfo("Login Berhasil", f"Halo {db_role}!")
-            self.login_success_callback(db_role)
-        else:
-            messagebox.showerror("Gagal", "Email atau password salah!")
+            if result:
+                stored_hash, db_role, nama_lengkap = result
+
+                # Cek password
+                if bcrypt.checkpw(
+                    password.encode("utf-8"), stored_hash.encode("utf-8")
+                ):
+                    # Role harus case sensitive sama persis
+                    if db_role.lower() != selected_role.lower():
+                        messagebox.showerror(
+                            "Role Tidak Sesuai",
+                            "Role yang dipilih tidak cocok dengan data di database.",
+                        )
+                        return
+
+                    messagebox.showinfo(
+                        "Login Berhasil", f"Halo {nama_lengkap} ({db_role})!"
+                    )
+                    self.login_success_callback(db_role)
+
+                else:
+                    messagebox.showerror("Gagal", "Password salah!")
+
+            else:
+                messagebox.showerror("Gagal", "Email tidak ditemukan!")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Terjadi kesalahan: {str(e)}")
+            try:
+                conn.close()
+            except:
+                pass
