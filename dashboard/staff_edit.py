@@ -7,7 +7,7 @@ class EditBarangPage(ctk.CTkToplevel):
     def __init__(self, kode_barang, nama_awal, stok_awal, merek_awal, satuan_awal):
         super().__init__()
 
-        self.kode_barang = kode_barang  # gunakan kode_barang ini untuk update di DB
+        self.kode_barang = kode_barang
 
         self.title("Edit Barang")
         self.geometry("400x400")
@@ -45,7 +45,7 @@ class EditBarangPage(ctk.CTkToplevel):
 
         if not all([nama, stok, merek, satuan]):
             messagebox.showerror("Error", "Semua field harus diisi!")
-            return  # pastikan return di dalam if supaya validasi jalan
+            return
 
         try:
             stok_int = int(stok)
@@ -58,8 +58,6 @@ class EditBarangPage(ctk.CTkToplevel):
         try:
             conn = connect_db()
             cursor = conn.cursor()
-
-            # Asumsi stored procedure update_barang menerima: kode_barang, nama, merek, satuan, stok
             cursor.callproc(
                 "update_barang", (self.kode_barang, nama, merek, satuan, stok_int)
             )

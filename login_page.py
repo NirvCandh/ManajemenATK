@@ -1,13 +1,12 @@
 import customtkinter as ctk
 import bcrypt
 from tkinter import messagebox
-from database import connect_db  # Pastikan ini fungsi koneksi db lo
+from database import connect_db
 
 
 class LoginApp(ctk.CTkFrame):
     def __init__(self, master, login_success_callback, show_register_callback):
         super().__init__(master)
-
         self.login_success_callback = login_success_callback
         self.show_register_callback = show_register_callback
 
@@ -41,7 +40,6 @@ class LoginApp(ctk.CTkFrame):
             font=("Arial Bold", 10),
         )
         label2.pack(side="left", padx=5)
-
         label2.bind("<Button-1>", lambda e: self.show_register_callback())
 
     def login(self):
@@ -56,21 +54,16 @@ class LoginApp(ctk.CTkFrame):
         try:
             conn = connect_db()
             cursor = conn.cursor()
-            # Pastikan kolom di DB: password (hashed), role (pas case), dan nama_lengkap ada
             query = "SELECT password, role, nama_lengkap FROM pengguna WHERE email=%s"
             cursor.execute(query, (email,))
             result = cursor.fetchone()
-            cursor.close()
-            conn.close()
 
             if result:
                 stored_hash, db_role, nama_lengkap = result
 
-                # Cek password
                 if bcrypt.checkpw(
                     password.encode("utf-8"), stored_hash.encode("utf-8")
                 ):
-                    # Role harus case sensitive sama persis
                     if db_role.lower() != selected_role.lower():
                         messagebox.showerror(
                             "Role Tidak Sesuai",
@@ -85,13 +78,15 @@ class LoginApp(ctk.CTkFrame):
 
                 else:
                     messagebox.showerror("Gagal", "Password salah!")
-
             else:
                 messagebox.showerror("Gagal", "Email tidak ditemukan!")
 
         except Exception as e:
             messagebox.showerror("Error", f"Terjadi kesalahan: {str(e)}")
+
+        finally:
             try:
+                cursor.close()
                 conn.close()
             except:
                 pass

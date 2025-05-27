@@ -11,7 +11,7 @@ from dashboard.update_pengeluaran import EditPengeluaranPage
 class StaffDashboard(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Dashboard Staff - Manajemen ATK")
+        self.title("Dashboard Petugas - Manajemen ATK")
         self.geometry("950x800")
         self.resizable(False, False)
 
@@ -22,7 +22,7 @@ class StaffDashboard(ctk.CTk):
         self.container.pack(padx=10, pady=10, fill="both", expand=True)
 
         ctk.CTkLabel(
-            self.container, text="Dashboard Staff", font=("Arial Bold", 22)
+            self.container, text="Dashboard Petugas", font=("Arial Bold", 22)
         ).pack(pady=10)
 
         button_frame = ctk.CTkFrame(self.container)
@@ -74,7 +74,7 @@ class StaffDashboard(ctk.CTk):
         data = [row for result in cursor.stored_results() for row in result.fetchall()]
         conn.close()
 
-        headers = ["Kode", "Nama Barang", "Stok", "Merek", "Satuan", "Edit", "Hapus"]
+        headers = ["Kode", "Nama Barang", "Merek", "Satuan", "Stok", "Edit", "Hapus"]
         self.build_table(self.table_frame, headers, data, self.build_barang_row)
 
     def build_barang_row(self, frame, row_index, item):
@@ -92,8 +92,21 @@ class StaffDashboard(ctk.CTk):
         ).grid(row=row_index, column=6, padx=5)
 
     def edit_barang(self, kode_barang):
-        EditBarangPage(kode_barang)
-        self.after(500, self.load_barang)
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT nama_barang, stok, merek, satuan FROM barang WHERE kode_barang = %s",
+            (kode_barang,),
+        )
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            nama, stok, merek, satuan = result
+            EditBarangPage(kode_barang, nama, stok, merek, satuan)
+            self.after(500, self.load_barang)
+        else:
+            messagebox.showerror("Error", "Barang tidak ditemukan.")
 
     def hapus_barang(self, kode_barang):
         confirm = messagebox.askyesno(

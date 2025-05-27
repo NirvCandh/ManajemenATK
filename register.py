@@ -1,107 +1,118 @@
 import customtkinter as ctk
-import bcrypt
+import mysql.connector
 from tkinter import messagebox
-from database import connect_db
+import bcrypt
 
 
-class RegisterApp(ctk.CTkFrame):
-    def __init__(self, master, show_login_callback):
-        super().__init__(master)
+class RegisterPage(ctk.CTkFrame):
+    def __init__(self, parent, show_login_callback):
+        super().__init__(parent)
+        self.parent = parent
         self.show_login_callback = show_login_callback
 
-        ctk.CTkLabel(self, text="Daftar Akun", font=("Arial Bold", 24)).pack(pady=20)
+        self.label_title = ctk.CTkLabel(
+            self, text="REGISTER", font=("Arial", 20, "bold")
+        )
+        self.label_title.pack(pady=10)
 
-        self.nama_entry = ctk.CTkEntry(self, placeholder_text="Nama Lengkap")
-        self.nama_entry.pack(pady=8)
+        self.entry_nama = ctk.CTkEntry(self, placeholder_text="Nama Lengkap")
+        self.entry_nama.pack(pady=5)
 
-        self.username_entry = ctk.CTkEntry(self, placeholder_text="Username")
-        self.username_entry.pack(pady=8)
+        self.entry_username = ctk.CTkEntry(self, placeholder_text="Username")
+        self.entry_username.pack(pady=5)
 
-        self.email_entry = ctk.CTkEntry(self, placeholder_text="Email")
-        self.email_entry.pack(pady=8)
+        self.entry_email = ctk.CTkEntry(self, placeholder_text="Email")
+        self.entry_email.pack(pady=5)
 
-        self.password_entry = ctk.CTkEntry(self, placeholder_text="Password", show="*")
-        self.password_entry.pack(pady=8)
+        self.entry_password = ctk.CTkEntry(self, placeholder_text="Password", show="*")
+        self.entry_password.pack(pady=5)
 
-        self.role_optionmenu = ctk.CTkOptionMenu(
+        self.entry_unit = ctk.CTkEntry(
+            self, placeholder_text="Unit (boleh kosong untuk Admin)"
+        )
+        self.entry_unit.pack(pady=5)
+
+        self.option_role = ctk.CTkOptionMenu(
             self, values=["Admin", "Petugas", "Pemohon"]
         )
-        self.role_optionmenu.pack(pady=8)
-        self.role_optionmenu.set("Pemohon")
+        self.option_role.set("Pilih Role")
+        self.option_role.pack(pady=5)
 
-        label_frame = ctk.CTkFrame(self, fg_color="transparent")
-        label_frame.pack(pady=5)
-
-        ctk.CTkLabel(
-            label_frame, text="Sudah punya akun?", font=("Arial Bold", 10)
-        ).pack(side="left")
-
-        self.login_label = ctk.CTkLabel(
-            label_frame,
-            text="Login di sini",
-            text_color="#1f6aa5",
-            font=("Arial Bold", 10),
-            cursor="hand2",
+        self.button_register = ctk.CTkButton(
+            self, text="Register", command=self.register
         )
-        self.login_label.pack(side="left", padx=4)
+        self.button_register.pack(pady=20)
 
-        self.login_label.bind(
-            "<Enter>",
-            lambda e: self.login_label.configure(underline=True, text_color="#144e85"),
+        self.button_to_login = ctk.CTkButton(
+            self,
+            text="Sudah punya akun? Login",
+            fg_color="transparent",
+            text_color="blue",
+            command=self.show_login_callback,
         )
-        self.login_label.bind(
-            "<Leave>",
-            lambda e: self.login_label.configure(underline=False, text_color="#1f6aa5"),
-        )
-        self.login_label.bind("<Button-1>", lambda e: self.open_login())
-
-        ctk.CTkButton(self, text="Register", command=self.register).pack(pady=20)
+        self.button_to_login.pack()
 
     def register(self):
-        nama_lengkap = self.nama_entry.get().strip()
-        username = self.username_entry.get().strip()
-        email = self.email_entry.get().strip()
-        password = self.password_entry.get()
-        role = self.role_optionmenu.get()
+        nama_lengkap = self.entry_nama.get()
+        username = self.entry_username.get()
+        email = self.entry_email.get()
+        password = self.entry_password.get()
+        role = self.option_role.get()
+        unit = self.entry_unit.get()
 
-        if not all([nama_lengkap, username, email, password]):
-            messagebox.showerror("Error", "Semua field harus diisi!")
+        if role == "Pilih Role":
+            messagebox.showerror("Error", "Role harus dipilih!")
             return
 
-        # Validasi email sederhana (bisa dikembangkan lagi)
-        if "@" not in email or "." not in email:
-            messagebox.showerror("Error", "Format email tidak valid!")
+        if not (nama_lengkap and username and email and password):
+            messagebox.showerror("Error", "Semua field wajib diisi!")
             return
 
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
         try:
-            conn = connect_db()
+            conn = mysql.connector.connect(
+                host="localhost", user="root", password="", database="db_ta_kelompok7"
+            )
             cursor = conn.cursor()
 
-            query = """
-                INSERT INTO pengguna (nama_lengkap, username, email, password, role)
-                VALUES (%s, %s, %s, %s, %s)
-            """
+            cursor.execute(
+                "SELECT * FROM pengguna WHERE username = %s OR email = %s",
+                (username, email),
+            )
+            if cursor.fetchone():
+                messagebox.showerror("Error", "Username atau Email sudah terdaftar.")
+                return
 
+            prefix = {"Admin": "AD", "Petugas": "PG", "Pemohon": "PM"}[role]
+            cursor.execute("SELECT COUNT(*) FROM pengguna WHERE role = %s", (role,))
+            count = cursor.fetchone()[0] + 1
+            id_pengguna = f"{prefix}{str(count).zfill(3)}"
+
+            query = """
+                INSERT INTO pengguna (id_pengguna, nama_lengkap, username, email, password, role, unit)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
             cursor.execute(
                 query,
-                (nama_lengkap, username, email, hashed_password.decode("utf-8"), role),
+                (
+                    id_pengguna,
+                    nama_lengkap,
+                    username,
+                    email,
+                    hashed_password.decode("utf-8"),
+                    role,
+                    unit if unit else None,
+                ),
             )
             conn.commit()
-            cursor.close()
-            conn.close()
 
-            messagebox.showinfo("Sukses", "Registrasi berhasil. Silakan login.")
-            self.open_login()
+            messagebox.showinfo("Sukses", "Registrasi berhasil!")
+            self.show_login_callback()
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Gagal registrasi: {str(e)}")
-            try:
+        except mysql.connector.Error as err:
+            messagebox.showerror("Database Error", f"Gagal konek ke database:\n{err}")
+        finally:
+            if conn.is_connected():
+                cursor.close()
                 conn.close()
-            except:
-                pass
-
-    def open_login(self):
-        self.destroy()
-        self.show_login_callback()
