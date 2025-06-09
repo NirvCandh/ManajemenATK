@@ -54,12 +54,12 @@ class LoginApp(ctk.CTkFrame):
         try:
             conn = connect_db()
             cursor = conn.cursor()
-            query = "SELECT password, role, nama_lengkap FROM pengguna WHERE email=%s"
+            query = "SELECT id_pengguna, password, role, nama_lengkap FROM pengguna WHERE email=%s"
             cursor.execute(query, (email,))
             result = cursor.fetchone()
 
             if result:
-                stored_hash, db_role, nama_lengkap = result
+                id_pengguna_db, stored_hash, db_role, nama_lengkap = result
 
                 if bcrypt.checkpw(
                     password.encode("utf-8"), stored_hash.encode("utf-8")
@@ -74,7 +74,8 @@ class LoginApp(ctk.CTkFrame):
                     messagebox.showinfo(
                         "Login Berhasil", f"Halo {nama_lengkap} ({db_role})!"
                     )
-                    self.login_success_callback(db_role)
+                    # Ubah di sini: oper 3 argumen
+                    self.login_success_callback(db_role, id_pengguna_db, nama_lengkap)
 
                 else:
                     messagebox.showerror("Gagal", "Password salah!")
